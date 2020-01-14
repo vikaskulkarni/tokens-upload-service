@@ -1,8 +1,13 @@
 package com.tokens.api;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -24,6 +29,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tokens.model.EventToken;
+import com.tokens.model.STATUS;
 import com.tokens.model.TokensStore;
 import com.tokens.model.UploadFileResponse;
 import com.tokens.service.DataStorageService;
@@ -32,15 +38,10 @@ import com.tokens.service.TokensUploadService;
 import io.swagger.annotations.ApiParam;
 
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.SpringCodegen", date = "2019-12-18T15:17:56.845-07:00")
-
 @RestController
 public class UploadTokensApiController implements UploadTokensApi {
 
 	private static final Logger logger = LoggerFactory.getLogger(UploadTokensApiController.class);
-
-	private final ObjectMapper objectMapper;
-
-	private final HttpServletRequest request;
 
 	private final TokensUploadService tokensUploadService;
 
@@ -50,8 +51,6 @@ public class UploadTokensApiController implements UploadTokensApi {
 	@org.springframework.beans.factory.annotation.Autowired
 	public UploadTokensApiController(ObjectMapper objectMapper, HttpServletRequest request,
 			TokensUploadService tokensUploadService) {
-		this.objectMapper = objectMapper;
-		this.request = request;
 		this.tokensUploadService = tokensUploadService;
 	}
 
@@ -59,18 +58,48 @@ public class UploadTokensApiController implements UploadTokensApi {
 	public UploadFileResponse uploadTokens(
 			@ApiParam(value = "file detail") @Valid @RequestPart("file") MultipartFile tokenFile,
 			@ApiParam(value = "Description of file contents.") @RequestParam(value = "note", required = false) String note) {
+		String uniqueID = UUID.randomUUID().toString();
 		String fileName = dataStorageService.storeFile(tokenFile);
-
-		dataStorageService.processFile(fileName);
 
 		String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath().path("/downloadFile/")
 				.path(fileName).toUriString();
 
-		TokensStore storedTokens = dataStorageService.writeFileToDB(tokenFile);
-		EventToken token = EventToken.builder().fileId(storedTokens.getId()).timestamp(System.currentTimeMillis()).build();
-		tokensUploadService.sendFileUploadedEvent(token);
+		TokensStore tokensStore = dataStorageService.writeFileToDB(tokenFile, uniqueID);
+		publishUploadEventWithStatus(tokensStore.getId(), uniqueID, STATUS.COMPLETED);
 
 		return new UploadFileResponse(fileName, fileDownloadUri, tokenFile.getContentType(), tokenFile.getSize());
+	}
+
+	private void publishUploadEventWithStatus(Long fileId, String uniqueID, STATUS status) {
+		long currentTimeMillis = System.currentTimeMillis();
+		EventToken token = fileId != null
+				? EventToken.builder().fileId(fileId).externalFileId(uniqueID).status(status)
+						.timestamp(currentTimeMillis).build()
+				: EventToken.builder().externalFileId(uniqueID).status(status).timestamp(currentTimeMillis).build();
+		tokensUploadService.sendFileUploadEvent(token);
+	}
+
+	@Override
+	public URL uploadTokensAsync(
+			@ApiParam(value = "file detail") @Valid @RequestPart("file") MultipartFile tokenFile,
+			@ApiParam(value = "Description of file contents.") @RequestParam(value = "note", required = false) String note) throws MalformedURLException {
+
+		String uniqueID = UUID.randomUUID().toString();
+		/*
+		 * String getTokensUri =
+		 * ServletUriComponentsBuilder.fromCurrentContextPath().path("/uploadStatus/")
+		 * .path(uniqueID).toUriString();
+		 */
+		URL getTokensUri = new URL("http://localhost:10003/" + uniqueID);
+		ExecutorService executor = Executors.newSingleThreadExecutor();
+		executor.submit(() -> {
+			dataStorageService.storeFile(tokenFile);
+			TokensStore tokensStore = dataStorageService.writeFileToDB(tokenFile, uniqueID);
+			publishUploadEventWithStatus(tokensStore.getId(), uniqueID, STATUS.COMPLETED);
+		});
+		publishUploadEventWithStatus(null, uniqueID, STATUS.STARTED);
+
+		return getTokensUri;
 	}
 
 	@Override

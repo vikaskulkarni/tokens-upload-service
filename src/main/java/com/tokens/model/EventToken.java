@@ -8,4 +8,6 @@ import lombok.ToString;
 public class EventToken {
     private long timestamp;
     private long fileId;
+    private String externalFileId;
+    private STATUS status;
 }

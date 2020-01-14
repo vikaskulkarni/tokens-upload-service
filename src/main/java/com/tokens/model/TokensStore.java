@@ -24,14 +24,18 @@ public class TokensStore {
 	@SequenceGenerator(name = "token_generator", sequenceName = "token_sequence", initialValue = 1)
 	private Long id;
 
+	private String externalFileId;
+
 	private String token_file_name;
 	private String token_file_type;
 
 	@Column(columnDefinition = "bytea")
 	private byte[] token_file_content;
 
-	public TokensStore(String token_file_name, String token_file_type, byte[] token_file_content) {
+	public TokensStore(String token_file_name, String externalFileId, String token_file_type,
+			byte[] token_file_content) {
 		this.token_file_name = token_file_name;
+		this.externalFileId = externalFileId;
 		this.token_file_type = token_file_type;
 		this.token_file_content = token_file_content;
 	}

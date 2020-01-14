@@ -88,26 +88,13 @@ public class DataStorageService {
 		}
 	}
 
-	public void processFile(String fileName) {
-		Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
-		Map<String, String> tokenMapping = new LinkedHashMap<String, String>();
-
-		try (Stream<String> stream = Files.lines(Paths.get(filePath.toUri()))) {
-			tokenMapping = stream.filter(line -> line.matches("^\\w+=\\w+$"))
-					.collect(Collectors.toMap(s -> s.split("=")[0], s -> s.split("=")[1]));
-			logger.info((Arrays.toString(tokenMapping.entrySet().toArray())));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	public TokensStore writeFileToDB(MultipartFile file) {
+	public TokensStore writeFileToDB(MultipartFile file, String externalFileId) {
 		String fileName = StringUtils.cleanPath(file.getOriginalFilename());
 
 		try {
 			validateFile(fileName);
 
-			TokensStore tokensStore = new TokensStore(fileName, file.getContentType(), file.getBytes());
+			TokensStore tokensStore = new TokensStore(fileName, externalFileId, file.getContentType(), file.getBytes());
 
 			return tokensFileRepo.save(tokensStore);
 		} catch (IOException ex) {

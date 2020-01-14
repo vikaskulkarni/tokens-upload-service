@@ -5,6 +5,8 @@
  */
 package com.tokens.api;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -54,7 +56,16 @@ public interface UploadTokensApi {
 	@ApiOperation(value = "", nickname = "downloadTokens", notes = "Download file containing tokens", tags = {
 			"tokens", })
 	@ApiResponses(value = { @ApiResponse(code = 200, message = "Success") })
-	@RequestMapping(value = "/downloadTokens/{fileName:.+}", produces = { "application/json" }, method = RequestMethod.GET)
+	@RequestMapping(value = "/downloadTokens/{fileName:.+}", produces = {
+			"application/json" }, method = RequestMethod.GET)
 	ResponseEntity<Resource> downloadFile(String fileName, HttpServletRequest request);
+
+	@ApiOperation(value = "", nickname = "uploadSingleTokensAsync", notes = "Upload a file containing tokens asynchronously", tags = {
+			"tokens", })
+	@ApiResponses(value = { @ApiResponse(code = 201, message = "Created"),
+			@ApiResponse(code = 200, message = "Error", response = ErrorResponse.class) })
+	@RequestMapping(value = "/uploadSingleTokensAsync", produces = { "application/json" }, consumes = {
+			"application/json", "multipart/form-data" }, method = RequestMethod.POST)
+	URL uploadTokensAsync(@Valid MultipartFile tokenFile, String note) throws MalformedURLException;
 
 }

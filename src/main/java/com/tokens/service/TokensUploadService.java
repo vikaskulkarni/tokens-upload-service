@@ -20,10 +20,11 @@ public class TokensUploadService {
 		this.tokensStreams = tokensStreams;
 	}
 
-	public void sendFileUploadedEvent(final EventToken token) {
-		log.info("Sending file uploaded event {}", token);
+	public void sendFileUploadEvent(final EventToken token) {
+		log.info("Sending file upload started event {}", token);
 		MessageChannel messageChannel = tokensStreams.outboundTokens();
 		messageChannel.send(MessageBuilder.withPayload(token)
 				.setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON).build());
 	}
+
 }
