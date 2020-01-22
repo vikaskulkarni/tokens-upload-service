@@ -80,9 +80,9 @@ public class UploadTokensApiController implements UploadTokensApi {
 	}
 
 	@Override
-	public URL uploadTokensAsync(
-			@ApiParam(value = "file detail") @Valid @RequestPart("file") MultipartFile tokenFile,
-			@ApiParam(value = "Description of file contents.") @RequestParam(value = "note", required = false) String note) throws MalformedURLException {
+	public URL uploadTokensAsync(@ApiParam(value = "file detail") @Valid @RequestPart("file") MultipartFile tokenFile,
+			@ApiParam(value = "Description of file contents.") @RequestParam(value = "note", required = false) String note)
+			throws MalformedURLException {
 
 		String uniqueID = UUID.randomUUID().toString();
 		/*
